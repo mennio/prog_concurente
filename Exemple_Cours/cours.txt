@@ -1,0 +1,267 @@
+/***********************************************************************************************************************************************************************/
+INTRODUCTION A LA PROGRAMMATION CONCURRENTE
+
+La programmation concurrente, telle que nous l’entendrons,se réfère à un système décomposé en tâches pouvant être exécutées dans un ordre quelconque.
+Certaines tâches sont exécutées avant d’autres, et certaines le sont en parallèle. 
+La programmation parallèle traite, quant à elle, de l’exécution simultanée de tâches sur différents processeurs. 
+
+Les problèmes qui vont nous intéresser sont donc le partage de données et la synchronisation entre threads.
+
+Un processus correspond à un fichier exécutable en cours d’exécution sur un processeur. Il est
+entre autre caractérisé par un code (le programme à exécuter), une pile et un tas qui permettent de
+stocker les données nécessaires à son bon fonctionnement, un identifiant unique, et une priorité.
+
+Un processus est créé lorsqu’un autre processus lance son exécution. Nous pouvons distinguer le
+processus parent (celui qui lance), et le processus enfant.
+
+L'ordonnanceur se charge du passage des processus.
+
+(VOIR FIGURE 1.1) 
+L’état initial d’un processus est terminé (destroyed en anglais). Après sa création, il
+passe à l’état prêt (ready en anglais) lorsque toutes les ressources à son bon fonctionnement ont
+été réquisitionnées. Le système d’exploitation peut ensuite le faire passer dans l’état élu, (active
+en anglais), état dans lequel le processus s’exécute. Ce passage n’est pas du ressort du processus,
+mais bien de l’ordonnanceur, qui s’occupe d’allouer le processeur aux différents processus concurrents. A tout instant l’ordonnanceur peut replacer le processus dans l’état prêt, pour laisser un autre
+processus s’exécuter. Il s’agit de la préemption d’un processus, qui se fait sans que le processus préempté n’en soit conscient. Depuis l’état élu, le processus peut aussi se retrouver dans l’état bloqué
+(blocked en anglais), lors de l’attente d’un événement ou du relâchement d’un mutex, par exemple.
+Il n’y a ensuite qu’une possibilité pour sortir de l’état bloqué. Il s’agit de réveiller le processus
+suite au relâchement d’un mutex ou au fait qu’un événement sur lequel le processus attend a été
+déclenché. Dans ce cas, le processus passe à l’état prêt, prêt à continuer son exécution. Lorsque le
+processus s’exécute, il peut se terminer. Les deux flèches sortantes de l’état élu représentent deux
+scénarios. Premièrement, si le processus a été détaché, c’est-à-dire qu’il est sans lien parental, lors
+de sa terminaison, le processus passe directement dans l’état terminé. Deuxièmement, si la terminaison du processus est importante pour le reste de l’application, alors il passe dans l’état zombie
+(zombied en anglais). Il y reste jusqu’à ce que le processus parent effectue une jointure, c’est-à-dire
+qu’il récupère les informations retournées par le processus en cours de terminaison.
+
+Pour résumer, listons ce que les processus et les threads ont en commun ou non.
+En commun :
+• possèdent un identifiant (ID), un ensemble de registres, un état, et une priorité ;
+• possèdent un bloc d’information ;
+• partagent des ressources avec les processus parents ;
+• sont des entités indépendantes, une fois créés ;
+• les créateurs du processus ou du thread ont contrôle sur eux ;
+ peuvent changer leurs attributs après création et créer de nouvelles ressources ;
+• ne peuvent accéder aux ressources d’autres threads et processus non reliés.
+
+Pas en commun :
+• les processus ont un espace d’adressage, les threads pas ;
+• les processus parents et enfants doivent utiliser des mécanismes de communication interprocessus ; les threads d’un même processus communiquent en lisant et modifiant les variables
+de leur processus ;
+• les processus enfants n’ont aucun contrôle sur les autres processus enfants ; les threads d’un
+processus sont considérés comme des pairs et peuvent exercer un contrôle sur les autres threads
+du processus ;
+• les processus enfants ne peuvent pas exercer de contrôle sur le processus parent ; n’importe quel
+thread peut exercer un contrôle sur le thread principal, et donc sur le processus entier.
+
+/***********************************************************************************************************************************************************************/
+EXCLUSION MUTUELLE
+
+Ressource critique est une ressource qui ne peut etre utilisée que par une seule tache à la fois.
+
+Section critique est le fait de réaliser l'exclusion mutuelle entre des taches.
+
+Exclusion Mutuelle => soit 2 taches T1 et T2 qui incrément une variable partagées x intialisé à 0. Sa valeur finale est = 1 ou 2.
+Il faut ordonner l'utilisation de la ressource critique. Ainsi, si une tâche Ti utilise la ressource et si une autre tâche Tj désire elle aussi l’utiliser,
+alors Tj doit être retardée tant que Ti ne la libère pas
+
+Exclusion mutuelle : condition de fonctionnement garantissant à un processus
+l'accès exclusif à une ressource critique pendant une suite d'opérations avec cette
+ressource
+
+Famine : La famine est un problème que peut avoir un algorithme d'exclusion mutuelle, lorsqu'un processus est perpétuellement privé des ressources nécessaires afin de terminer son exécution. 
+Il se produit lorsqu'un algorithme n'est pas équitable, 
+c'est-à-dire qu'il ne garantit pas à tous les threads souhaitant accéder à une section critique une probabilité non nulle d'y parvenir en un temps fini.
+
+Les solutions apportées au problème de l’exclusion mutuelle doivent satisfaire les contraintes suivantes:
+
+1. On ne fait aucune hypothèse à propos des instructions ni du nombre de processeurs dans
+l’environnement. On suppose uniquement que les instructions assembleurs (telles que load,
+store, etc.) sont exécutées atomiquement. Si deux de ces instructions sont exécutées simultanément, le résultat sera le même que si elles étaient exécutées l’une après l’autre dans un
+ordre inconnu à priori.
+2. On ne fait aucune hypothèse sur les vitesses relatives des tâches.
+3. Lorsqu’une tâche n’est pas dans sa section critique, elle ne doit pas empêcher les autres tâches
+d’entrer dans leur section critique.
+4. On ne doit pas remettre indéfiniment la décision qui consiste à admettre l’une des tâche qui
+est en compétition pour l’accès à la section critique.
+
+//algorithme de peterson for exclusion mutuelle
+
+2.4 Algorithme de Peterson
+Avant de conclure, nous présentons un dernier algorithme, algorithme 2.7, qui est remarquable par
+sa simplicité.
+Algorithme 2.7 Algorithme de Peterson
+bool intention[2] = {false,false};
+int tour = 0; // ou 1
+void *T0(void *arg)
+{
+while (true) {
+intention[0] = true;
+tour = 1;
+while (intention[1] && tour == 1)
+;
+/* section critique */
+intention[0] = false;
+/* section non-critique */
+}
+}
+void *T1(void *arg)
+{
+while (true) {
+intention[1] = true;
+tour = 0;
+while (intention[0] && tour == 0)
+;
+/* section critique */
+intention[1] = false;
+/* section non-critique */
+}
+}
+Les variables partagées entre les deux tâches sont
+bool intention[2] = {false,false};
+int tour = 0; // ou 1
+Lorsque la tâche Ti veut accéder à la section critique, elle positionne intention[i] à vrai. La variable
+tour départage les deux tâches si celles-ci désirent accéder en même temps à la section critique.
+Pour vérifier que l’exclusion mutuelle est conservée, supposons que T0 et T1 sont toutes les deux
+dans leurs sections critiques. Dans ce cas, intention[i] = vrai pour i = 0 et 1. Mais ces tâches
+Programmation Concurrente 1 
+c HEIG-VD
+26 CHAPITRE 2. EXCLUSION MUTUELLE
+n’ont pas pu sortir de leurs boucles en même temps car tour ne peut prendre simultanément la
+valeur 0 et la valeur 1. L’une des tâches est donc entrée en section critique avant l’autre. Supposons
+que c’est Ti
+. Ti a alors évalué la condition de sa boucle pendant que Tj exécutait tour = i. Mais à
+ce moment, Tj trouve intention[i] à vrai et tour à i lorsqu’elle évalue la condition de sa boucle.
+Cette condition sera évaluée à vrai car ces variables conservent leurs valeurs tant que Ti se trouve
+en section critique, ce qui préserve l’exclusion mutuelle.
+Pour vérifier qu’il n’y a pas d’interblocage, remarquons qu’une tâche Ti ne peut être bloquée dans
+son prélude que si elle trouve sans cesse intention[j] =vrai et tour = j. Si Tj ne désire pas
+accéder à la section critique, intention[j] est à faux et Ti ne peut pas être bloquée. Par contre
+si intention[j] est à vrai, Tj doit aussi être dans sa boucle pour qu’il ait interblocage. Mais à ce
+moment, la variable tour, valant nécessairement 0 ou 1, favorisera l’une des deux tâche. Il ne peut
+donc pas y avoir d’interblocage.
+Pour montrer que le protocole est équitable, il suffit de montrer que si Ti est dans sa boucle d’attente
+et que Tj est dans sa section critique, Ti pénétrera en section critique avant Tj si celle-ci désire à
+nouveau entrer en section critique. Lorsque Tj sort de son postlude, intention[j] est à faux et Ti
+peut accéder à son tour à la section critique. Si Tj désire à nouveau entrer en section critique, elle
+repositionne intention[j] à vrai et tour à i. Ainsi Tj est bloquée dans sa boucle d’attente tant que
+Ti n’accède pas à la section critique.
+Les deux algorithmes, Dekker et Peterson, se généralisent à n tâches. Toutefois, cette généralisation
+sort du cadre de ce cours.
+
+/***********************************************************************************************************************************************************************/
+VERROUS ET SEMAPHORES
+
+Les verrous sont utilisées pour pallier le problème des deux algo difficile de compréhension.
+Un verrou est une variable boolean sur laquelle 2 opérations sont définis (verouiller et deverouiller).
+Ce sont les seuls à pouvoir manipuler le verrou outre la création et la destruction.
+
+algo :
+
+    void Verrouille(verrou v)
+    {
+        if (v)
+        v = false;
+        else
+        suspendre la tâche appelante dans la file associée à v
+    }
+
+    void Déverrouille(verrou v)
+    {
+        if (la file associée à v != vide)
+        débloquer une tâche en attente dans file
+        else
+        v = true;
+    }
+
+    Ainsi, si un verrou v est initialisé à vrai et qu’une tâche appelle V errouille(v), le verrou est positionné à faux. 
+    Si une seconde tâche appelle V errouille(v), alors cette tâche, qui est à l’état élu,
+    passe à l’état bloqué et joint la file d’attente associée à v. La primitive Deverrouille ´ (v) réalise
+    l’opération inverse. S’il y a une tâche en attente sur le verrou v, alors cette tâche est réactivée. La
+    tâche réveillée sort de la file d’attente associée à v pour joindre la file des tâches prêtes. Remarquons
+    que l’exécution de la primitive Deverrouille ´ (v) revient à passer le verrou v à la tâche réveillée.
+    S’il n’y a pas de tâche en attente pour obtenir le verrou v, la primitive Deverrouille ´ (v) libère le
+    verrou v en le positionnant à vrai (état initial). (VOIR FIGURE 1 ETAT)
+
+    //VEROU EN POSIX
+    verrou prevu pour résoudre l'exclusion mutuelle c'est pour cela qu'il y a le prefixe mutex.
+    2 façons d'initialisé des verrous:
+        => definir une variable global de type "pthtread_mutex" & de l'intialisé par le symbole PTHREAD_MUTEX_INITIALIZER.
+        => utiliser la méthode pthread_mutex_init() si il est creer dynamiquement( c'est quand une variable est alloué par malloc())
+
+    pthread_mutex_lock et pthread_mutex_unlock => fonction pour verouiller et déverouiller le verrou
+
+    //SEMAPHORES || MONITEURS
+
+    Les sémaphores qui ne peuvent être pris qu’un nombre déterminé de fois (si le sémaphore est déjà pris une nouvelle tentative bloquera l’appelant)
+    Les moniteurs qui permettent « d’encapsuler » des données en définissant des règles d’accès exclusif à ces données.
+
+    Un sémaphore est un élément de synchronisation auquel est associées (au moins) quatre éléments :
+    Ø un compteur interne entier (on le note S_CPT)
+    Ø une file d'attente
+    Ø deux opérations atomiques (exécution indivisible) nommées P et V
+    Ø une opération atomique d'initialisation (et création) que l'on notera E0
+     Si S est un sémaphore, on notera P(S) ou V(S) ou E0(S,V) l'appel d'uneopération sur le sémaphore S
+     On dit qu'un sémaphore est binaire si son compteur reste inférieur ou égal à 1 et on parle de Mutex ou de Lock 
+
+    utilise la bibliotheque semaphore.h;
+    variable de type sem_t;
+    Il est initialisé par un appel de la primitive
+    //PERMET DE CREER LE SEMAPHORES
+    int sem_init(sem_t *sem, int pshared, unsigned int valeur);
+        Ø si "phsahed" vaut 0 le sémaphore ne peut pas être partagé entre tâches de
+        différents processus (partage uniquement au sein d'un même processus)
+        Ø valeur définit la valeur initiale de ce sémaphore (positif ou nul)
+
+    //Deux opérations prise et relache
+    P : sem_wait(sem_t * sem);
+    V : sem_post(sem_t * sem);
+
+
+    //MONITEURS
+
+    Les moniteurs proposent une solution de "haut-niveau" pour la protection dedonnées partagées (Hoare 1974)
+    Ils simplifient la mise en place de sections critiques
+    Ils sont définis par
+        Ø des données internes (appelées aussi variables d'état)
+        Ø des primitives d'accès aux moniteurs (points d'entrée)
+        Ø des primitives internes (uniquement accessibles depuis l'intérieur du moniteur)
+        Ø une ou plusieurs files d'attentes internes (différences importantes)
+
+
+Il existe pour cela deux types de primitives
+    Ø wait : qui met en attente l'appelant et libère l'accès au moniteur
+    Ø signal : qui réveille une des tâches en attente à l'intérieur du moniteur (une tâche qui a exécuté précédemment un wait)
+
+
+Un moniteur Posix est l'association
+    Ø d’un mutex ( type pthread_mutex_t ) qui sert à protéger la partie de code où l’on teste les conditions de progression
+    Ø d’une variable conditionnelle ( type pthread_cond_t ) qui sert de point de signalisation :
+        ü on se met en attente sur cette variable par la primitive
+            pthread_cond_wait(&laVariableConditionnelle, &leMutex);
+        ü on signale sur cette variable avec la primitive
+            pthread_cond_signal(&laVariableConditionnelle);
+
+//BILAN
+
+    Sémaphores :
+        Ø mécanisme simple mais qui peut conduire à des erreurs subtiles
+        Ø demande une grande rigueur dans leur utilisation
+        Ø à réserver pour la mise en place de petites sections critiques
+    Moniteurs :
+        Ø mécanisme de plus haut niveau
+        Ø simplifie la mise en place de section critique
+        Ø peut néanmoins conduire à des erreurs (mauvaise protection, trop de points d'entrées, oubli de réévaluation des conditions de progression)
+
+//CONCLUSION
+En modèle réparti la communication et la synchronisation entre tâches se fait parl’échange de messages; on utilise principalement deux mécanismes :
+    Ø L'appel de procédures à distance (RPC), mécanisme plutôt système
+    Ø L’invocation de méthodes distantes (RMI), mécanisme plutôt langage
+En modèle centralisé la communication et la synchronisation reposent sur le partage dedonnées communes; il faut alors « protéger » l’accès ces données à l’aide de deux mécanismes :
+    Ø Les sémaphores, plutôt système
+    Ø Les moniteurs, plutôt langage
+
+
+/***********************************************************************************************************************************************************************/
+
+
+
