@@ -83,5 +83,57 @@ void f(void){
             pthread_mutex_unlock( &monMutex ); //on deverouille le mutex
         }
     }
+}*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+typedef struct _course {
+	int cid;
+	int km;
+} course;
+
+
+int kilometrage_total;
+pthread_mutex_t lock_kt;
+
+ 
+void *faire_course(void* arg) {
+	course *une_course = (course *)arg;
+	int km_total;
+	printf("Acquisition de la course : %d\n", une_course->cid);
+	pthread_mutex_lock(&lock_kt);
+	kilometrage_total += une_course->km;
+	km_total = kilometrage_total;
+	pthread_mutex_unlock(&lock_kt);
+	printf("Kilometrage total mis à jour après course %d : %d\n", une_course->cid, km_total);
+	pthread_exit(NULL);
 }
+
+
+int main(int argc, char**argv) { // arg utilisateur
+	int ptc;
+	int nbCourses = atoi(argv[1]);
+	printf("Nb de courses : %d\n", nbCourses);
+	pthread_t threads[nbCourses];
+	course courses[nbCourses];
+	kilometrage_total = 0;
+	pthread_mutex_init(&lock_kt, NULL);
+	for (int i = 0; i < nbCourses; ++i) {
+		courses[i].cid = i;
+		courses[i].km = (i + nbCourses) * nbCourses;
+		if ((ptc = pthread_create(&threads[i], NULL, faire_course, &courses[i]))) {
+			fprintf(stderr, "erreur pthread_create : %d\n", ptc);
+			return EXIT_FAILURE;
+		}
+	}
+	for (int i = 0; i < nbCourses; ++i) {
+		pthread_join(threads[i], NULL);
+	}
+
+	printf("\nKilometrage total à la fin de toutes les courses : %d\n", kilometrage_total);
+
+	return EXIT_SUCCESS;
+} 
 
